@@ -1,5 +1,5 @@
 {
-  "name":"xlext/xl_mq",
+  "name":"xlext/mq",
   "description":"MQ消息队列基于redis",
   "keywords":["php","mq","xl","redis"],
   "license" : "MIT",

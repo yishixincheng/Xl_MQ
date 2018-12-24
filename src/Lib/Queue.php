@@ -127,14 +127,20 @@ class Queue{
 
         $len=$redis->lPush($key,$_msgStruct); //设置到队列中
 
-        if($len>MQConfig::getMaxQuequeTaskNum()){
+        $qnpset=MQConfig::getQNPSet();
 
-            //大于个数
-            $_spillMsgStruct=$redis->lPop($key); //移除头部队列
+        if($qnpset&&$qnpset[$_queuename]&&is_array($qnpset[$_queuename])&&$qnpset[$_queuename]['type']==1){
 
-            if($_spillMsgStruct){
-                //保存到文件中
-                SpillQueue::add($_queuename,$_spillMsgStruct);
+            //顺序执行则不启动回收机制
+
+        }else{
+
+            if($len>MQConfig::getMaxQuequeTaskNum()){
+                $_spillMsgStruct=$redis->lPop($key); //移除头部队列
+                if($_spillMsgStruct){
+                    //保存到文件中
+                    SpillQueue::add($_queuename,$_spillMsgStruct);
+                }
             }
 
         }
@@ -241,14 +247,34 @@ class Queue{
         $currtime=time();
         if($time){
 
-            if($currtime-$time<1800){
-                return true; //有锁
+            if($currtime-$time<600){
+                return true; //10分钟自动解锁
             }
 
         }
         $redis->set($key,$currtime);
 
         return false;
+    }
+
+    public static function lockByQueue($queuename,$expireTime=0){
+
+        $redis=static::getRedisObject();
+
+        $key="xl_mq_controlparam_lockqueue_".$queuename;
+
+        return $redis->lock($key,$expireTime);
+
+    }
+
+    public static function unLockByQueue($queuename){
+
+        $redis=static::getRedisObject();
+
+        $key="xl_mq_controlparam_lockqueue_".$queuename;
+
+        return $redis->unlock($key);
+
     }
 
 
